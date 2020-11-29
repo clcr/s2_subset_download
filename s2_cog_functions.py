@@ -60,9 +60,11 @@ def get_subset_image(cog_path, aoi_path, out_path, band):
     res = s2_resolutions[band]
     subset_gt = [x_geo, res, 0, y_geo, 0, res*-1]
     out = ras.save_array_as_image(image_data, out_path, subset_gt, this_prod.GetProjection())
+    return out
 
 
 def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf):
+    # TODO: Add cloud cover and output EPSG as variables
     s2_products = qry.check_for_s2_data_by_date(aoi_file, date_start, date_end, conf)
     for prod_id, product in s2_products.items():
         with TemporaryDirectory() as td:
@@ -71,14 +73,6 @@ def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf):
                 cog_path = build_aws_path(product, band)
                 get_subset_image(cog_path, aoi_file, temp_path, band)
             out_name = p.basename(aoi_file).rsplit('.')[0] + ".tif"
-            out_name = str(product["beginposition"]) + '_' + out_name
+            out_name = str(product["beginposition"].strftime("%Y-%m-%d")) + '_' + out_name
             out_path = p.join(out_dir, out_name)
             ras.stack_images([p.join(td, band + ".tif") for band in bands], out_path)
-
-
-
-
-
-
-       
-
