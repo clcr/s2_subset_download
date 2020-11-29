@@ -49,7 +49,7 @@ def get_subset_image(cog_path, aoi_path, out_path, band):
     this_prod = gdal.Open('/vsicurl/'+cog_path)
     with TemporaryDirectory() as td:
         shp_path = td + "tmp.shp"
-        coord.reproject_vector(aoi_file, shp_path, this_prod.GetProjection())
+        coord.reproject_vector(aoi_path, shp_path, this_prod.GetProjection())
         aoi_wkt = qry.shapefile_to_wkt(shp_path)
     x_min, x_max, y_min, y_max = coord.pixel_bounds_from_polygon(this_prod, aoi_wkt)
     x_size = x_max-x_min
@@ -61,27 +61,22 @@ def get_subset_image(cog_path, aoi_path, out_path, band):
     subset_gt = [x_geo, res, 0, y_geo, 0, res*-1]
     out = ras.save_array_as_image(image_data, out_path, subset_gt, this_prod.GetProjection())
 
-    
-if __name__ == "__main__":
-    aoi_file = "Wuhan_AOI.shp"
-    date_start = "20200702"
-    date_end = "20200719"
-    out_dir = "."
-    bands = ["B02", "B03", "B04", "B08"]
-    
-    conf = {'sent_2':{'user':'jfr10', 'pass':'gabomba58'}}
-    s2_products = qry.check_for_s2_data_by_date(aoi_file, date_start, date_end, conf)
 
+def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf):
+    s2_products = qry.check_for_s2_data_by_date(aoi_file, date_start, date_end, conf)
     for prod_id, product in s2_products.items():
         with TemporaryDirectory() as td:
             for band in bands:
-                temp_path = p.join(td, band+".tif")
+                temp_path = p.join(td, band + ".tif")
                 cog_path = build_aws_path(product, band)
                 get_subset_image(cog_path, aoi_file, temp_path, band)
             out_name = p.basename(aoi_file).rsplit('.')[0] + ".tif"
             out_name = str(product["beginposition"]) + '_' + out_name
             out_path = p.join(out_dir, out_name)
-            ras.stack_images([p.join(td, band+".tif") for band in bands], out_path)
+            ras.stack_images([p.join(td, band + ".tif") for band in bands], out_path)
+
+
+
 
 
 
