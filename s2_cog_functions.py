@@ -61,7 +61,7 @@ def get_subset_image(cog_path, aoi_path, out_path, band):
     return out
 
 
-def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf):
+def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf, clip_to_aoi = True):
     # TODO: Add cloud cover and output EPSG as variables
     s2_products = qry.check_for_s2_data_by_date(aoi_file,
                                                 date_start.strftime("%Y%m%d"),
@@ -79,7 +79,10 @@ def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf):
             ras.stack_images([p.join(td, band + ".tif") for band in bands], p.join(td, "stacked.tif"))
             # TODO: Name bands in metadata
             # TODO: Clip to AOI
-            ras.clip_raster(p.join(td, "stacked.tif"), aoi_file, out_path)
+            if clip_to_aoi:
+                ras.clip_raster(p.join(td, "stacked.tif"), aoi_file, out_path)
+            else:
+                os.rename(p.join(td, "stacked.tif"), out_path)
             new_image = gdal.Open(out_path)
             for band_index in range(new_image.RasterCount):
                 band = new_image.GetRasterBand(band_index + 1) # Geotif bands are 1-indexed
