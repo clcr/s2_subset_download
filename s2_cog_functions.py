@@ -65,7 +65,10 @@ def get_subset_image(cog_path, aoi_path, out_path, band):
 
 def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf):
     # TODO: Add cloud cover and output EPSG as variables
-    s2_products = qry.check_for_s2_data_by_date(aoi_file, date_start, date_end, conf)
+    s2_products = qry.check_for_s2_data_by_date(aoi_file,
+                                                date_start.strftime("%Y%m%d"),
+                                                date_end.strftime("%Y%m%d"),
+                                                conf)
     for prod_id, product in s2_products.items():
         with TemporaryDirectory() as td:
             for band in bands:
