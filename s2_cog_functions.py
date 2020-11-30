@@ -74,6 +74,7 @@ def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf):
                 cog_path = build_aws_path(product, band)
                 get_subset_image(cog_path, aoi_file, temp_path, band)
             out_name = p.basename(aoi_file).rsplit('.')[0] + ".tif"
-            out_name = str(product["beginposition"].strftime("%Y-%m-%d")) + '_' + out_name
+            out_name = out_name + '_' + str(product["beginposition"].strftime("%Y-%m-%d"))
             out_path = p.join(out_dir, out_name)
             ras.stack_images([p.join(td, band + ".tif") for band in bands], out_path)
+            # TODO: Name bands in metadata
