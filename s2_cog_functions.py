@@ -14,8 +14,6 @@ from pyeo import raster_manipulation as ras
 
 import pdb
 
-# Pil wants RGP pixels 
-
 s2_resolutions = {
         "B01":60,
         "B02":10,
