@@ -3,6 +3,7 @@ A script for downloading and stacking subsets of Sentinel 2 images hosted as clo
 
 # Requirements
 Pyeo: github.com/clcr/pyeo
+If you have followed the Pyeo installation instructions there, s2_subset_download will work in the pyeo_env environment
 
 # Setup
 Clone repository, then fill out `creds.conf` with Scihub username and password.
