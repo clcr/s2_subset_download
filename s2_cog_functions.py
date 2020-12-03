@@ -30,6 +30,11 @@ s2_resolutions = {
         "B12": 20}
 
 
+class CogNotFoundError(Exception):
+    pass
+
+
+
 def build_aws_path(product, band='B02'):
     date = product["beginposition"]
     # cogs id: S2A_30QYD_20200322_0_L2A
@@ -45,6 +50,9 @@ def build_aws_path(product, band='B02'):
 
 def get_subset_image(cog_path, aoi_path, out_path, band):
     this_prod = gdal.Open('/vsicurl/'+cog_path)
+    if not this_prod:
+        raise CogNotFoundError
+
     with TemporaryDirectory() as td:
         shp_path = td + "tmp.shp"
         coord.reproject_vector(aoi_path, shp_path, this_prod.GetProjection())
@@ -82,25 +90,31 @@ def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf, clo
         n = prod_enum +1
         print(f"Downloading product {n} of {len(s2_products)}")
         with TemporaryDirectory() as td:
-            for band in bands:
-                temp_path = p.join(td, band + ".tif")
-                cog_path = build_aws_path(product, band)
-                print(f"Downloading band {band}")
-                get_subset_image(cog_path, aoi_file, temp_path, band)
-            out_name = p.basename(aoi_file).rsplit('.')[0]
-            out_name = out_name + '_' + str(product["beginposition"].strftime("%Y-%m-%d")) +".tif"
-            out_path = p.join(out_dir, out_name)
+            try:
+                for band in bands:
+                    temp_path = p.join(td, band + ".tif")
+                    cog_path = build_aws_path(product, band)
+                    print(f"Downloading band {band}")
+                    get_subset_image(cog_path, aoi_file, temp_path, band)
+                out_name = p.basename(aoi_file).rsplit('.')[0]
+                out_name = out_name + '_' + str(product["beginposition"].strftime("%Y-%m-%d")) +".tif"
+                out_path = p.join(out_dir, out_name)
 
-            print(f"Stacking bands in image {n}")
-            ras.stack_images([p.join(td, band + ".tif") for band in bands], p.join(td, "stacked.tif"))
-            if clip_to_aoi:
-                ras.clip_raster(p.join(td, "stacked.tif"), aoi_file, out_path)
-            else:
-                os.rename(p.join(td, "stacked.tif"), out_path)
-            new_image = gdal.Open(out_path)
-            for band_index in range(new_image.RasterCount):
-                band = new_image.GetRasterBand(band_index + 1) # Geotif bands are 1-indexed
-                band.SetDescription(bands[band_index])
-                band = None
-            new_image = None
-            print(f"Product {n} downloaded to {out_path}")
+                print(f"Stacking bands in image {n}")
+                ras.stack_images([p.join(td, band + ".tif") for band in bands], p.join(td, "stacked.tif"))
+                if clip_to_aoi:
+                    ras.clip_raster(p.join(td, "stacked.tif"), aoi_file, out_path)
+                else:
+                    os.rename(p.join(td, "stacked.tif"), out_path)
+                new_image = gdal.Open(out_path)
+                for band_index in range(new_image.RasterCount):
+                    band = new_image.GetRasterBand(band_index + 1) # Geotif bands are 1-indexed
+                    band.SetDescription(bands[band_index])
+                    band = None
+                new_image = None
+                print(f"Product {n} downloaded to {out_path}")
+            except CogNotFoundError:
+                print(f"Product {cog_path} not found, skipping.")
+                with open("bad_cog_urls.txt", 'w+') as bad_url_log:
+                    bad_url_log.write(cog_path)
+                    print(f"URL logged to {bad_url_log.name}")
