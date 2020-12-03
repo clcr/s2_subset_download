@@ -15,19 +15,19 @@ from pyeo import raster_manipulation as ras
 import pdb
 
 s2_resolutions = {
-        "B01":60,
-        "B02":10,
-        "B03":10,
-        "B04":10,
-        "B05":20,
-        "B06":20,
-        "B07":20,
-        "B08":10,
-        "B8a":20,
-        "B09":60,
-        "B10":60,
-        "B11":20,
-        "B12":20}
+        "B01": 60,
+        "B02": 10,
+        "B03": 10,
+        "B04": 10,
+        "B05": 20,
+        "B06": 20,
+        "B07": 20,
+        "B08": 10,
+        "B8a": 20,
+        "B09": 60,
+        "B10": 60,
+        "B11": 20,
+        "B12": 20}
 
 
 def build_aws_path(product, band='B02'):
@@ -63,22 +63,34 @@ def get_subset_image(cog_path, aoi_path, out_path, band):
 
 def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf, clip_to_aoi = True):
     # TODO: Add cloud cover and output EPSG as variables
-    s2_products = qry.check_for_s2_data_by_date(aoi_file,
-                                                date_start.strftime("%Y%m%d"),
-                                                date_end.strftime("%Y%m%d"),
-                                                conf)
-    for prod_id, product in s2_products.items():
+    print(f"Downloading S2 subsets for {aoi_file} between {date_start} and {date_end}")
+    try:
+        s2_products = qry.check_for_s2_data_by_date(aoi_file,
+                                                    date_start.strftime("%Y%m%d"),
+                                                    date_end.strftime("%Y%m%d"),
+                                                    conf)
+    except KeyError as e:
+        if e.args[0] == 'opensearch:totalResults':
+            print("No products found.")
+        else:
+            raise e
+    print(f"{len(s2_products)} images found")
+
+    for prod_enum, (prod_id, product) in enumerate(s2_products.items()):
+        n = prod_enum +1
+        print(f"Downloading product {n} of {len(s2_products)}")
         with TemporaryDirectory() as td:
             for band in bands:
                 temp_path = p.join(td, band + ".tif")
                 cog_path = build_aws_path(product, band)
+                print(f"Downloading band {band}")
                 get_subset_image(cog_path, aoi_file, temp_path, band)
             out_name = p.basename(aoi_file).rsplit('.')[0]
             out_name = out_name + '_' + str(product["beginposition"].strftime("%Y-%m-%d")) +".tif"
             out_path = p.join(out_dir, out_name)
+
+            print(f"Stacking bands in image {n}")
             ras.stack_images([p.join(td, band + ".tif") for band in bands], p.join(td, "stacked.tif"))
-            # TODO: Name bands in metadata
-            # TODO: Clip to AOI
             if clip_to_aoi:
                 ras.clip_raster(p.join(td, "stacked.tif"), aoi_file, out_path)
             else:
@@ -89,3 +101,4 @@ def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf, cli
                 band.SetDescription(bands[band_index])
                 band = None
             new_image = None
+            print(f"Product {n} downloaded to {out_path}")
