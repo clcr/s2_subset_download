@@ -115,6 +115,6 @@ def download_s2_subset(aoi_file, date_start, date_end, out_dir, bands, conf, clo
                 print(f"Product {n} downloaded to {out_path}")
             except CogNotFoundError:
                 print(f"Product {cog_path} not found, skipping.")
-                with open("bad_cog_urls.txt", 'w+') as bad_url_log:
+                with open("bad_cog_urls.txt", 'a') as bad_url_log:
                     bad_url_log.write(cog_path)
                     print(f"URL logged to {bad_url_log.name}")
